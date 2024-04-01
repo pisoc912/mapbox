@@ -1,7 +1,9 @@
 import mapboxgl from 'mapbox-gl';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { accessToken } from '../utils/constants';
+import { getFromLocalStorage, saveToLocalStorage } from './storageService';
 
 // Default coordinates and zoom level for map initialization
 const defaultCoordinates = [-103.5917, 40.6699];
@@ -45,6 +47,44 @@ const initializeMap = (container, setLng, setLat, setZoom, setMapInitialized) =>
 };
 
 /**
+ * Adds drawing controls to the map and sets up event listeners for drawing actions.
+ * @param {mapboxgl.Map} map - The Mapbox GL map instance.
+ * @param {Function} onFeatureSelect - Callback function to handle feature selection events.
+ * @returns {MapboxDraw} The drawing control instance.
+ */
+const addDrawControls = (map, onFeatureSelect) => {
+    const draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: {
+            polygon: true,
+            line_string: true,
+            point: true,
+            trash: true
+        }
+    });
+    map.addControl(draw);
+
+    map.on('draw.create', (e) => {
+        const features = draw.getAll();
+        saveToLocalStorage('geojson', features);
+        onFeatureSelect(e);
+    });
+
+    map.on('draw.update', (e) => {
+        const features = draw.getAll();
+        saveToLocalStorage('geojson', features);
+    });
+
+    map.on('draw.delete', (e) => {
+        const features = draw.getAll();
+        const remainingFeatures = features.features.filter(feature => feature.id !== e.features[0].id);
+        saveToLocalStorage('geojson', { features: remainingFeatures });
+    });
+
+    return draw;
+};
+
+/**
  * Loads the map into the specified container, optionally using geolocation for the initial center.
  * @param {HTMLElement} container - The container to load the map into.
  * @param {Function} setLng - Setter function for longitude state.
@@ -60,10 +100,13 @@ export const loadMap = (container, setLng, setLat, setZoom, setMapInitialized, o
             const userLat = position.coords.latitude;
             const map = initializeMap(container, setLng, setLat, setZoom, setMapInitialized);
             map.setCenter([userLng, userLat]);
+            addDrawControls(map, onFeatureSelect);
         }, () => {
-            initializeMap(container, setLng, setLat, setZoom, setMapInitialized);  
+            const map = initializeMap(container, setLng, setLat, setZoom, setMapInitialized);
+            addDrawControls(map, onFeatureSelect);
         });
     } else {
-        initializeMap(container, setLng, setLat, setZoom, setMapInitialized);
+        const map = initializeMap(container, setLng, setLat, setZoom, setMapInitialized);
+        addDrawControls(map, onFeatureSelect);
     }
 };
