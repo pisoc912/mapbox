@@ -13,5 +13,12 @@ code {
 }
 
 .map-container {
+  /* Apply for Map Size*/
   height: 100vh;
+}
+
+
+.MuiDialog-paper {
+  /* Apply for Dialog Resize */
+  width: 600px;
 }
