@@ -2,23 +2,13 @@ import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { accessToken } from '../utils/constants';
-import { getFromLocalStorage, saveToLocalStorage } from './storageService';
+import { accessToken } from '../utils/constant';
+import { getFromLocalStorage, saveToLocalStorage, updateGeoJSONSource } from './storageService';
 
-// Default coordinates and zoom level for map initialization
 const defaultCoordinates = [-103.5917, 40.6699];
-const defaultZoom = 9; // Default zoom level
+const defaultZoom = 9;
 
-/**
- * Initializes the map on the given container with default settings.
- * @param {HTMLElement} container - The container to initialize the map in.
- * @param {Function} setLng - Setter function for longitude state.
- * @param {Function} setLat - Setter function for latitude state.
- * @param {Function} setZoom - Setter function for zoom level state.
- * @param {Function} setMapInitialized - Setter function to indicate map initialization is complete.
- * @returns {mapboxgl.Map} The initialized map instance.
- */
-const initializeMap = (container, setLng, setLat, setZoom, setMapInitialized) => {
+const initializeMap = (container, setLng, setLat, setZoom, setMapInitialized, onFeatureSelect) => {
     mapboxgl.accessToken = accessToken;
 
     const map = new mapboxgl.Map({
@@ -28,31 +18,6 @@ const initializeMap = (container, setLng, setLat, setZoom, setMapInitialized) =>
         zoom: defaultZoom
     });
 
-    map.on('load', () => {
-        setMapInitialized(true);
-        setLng(defaultCoordinates[0]);
-        setLat(defaultCoordinates[1]);
-        setZoom(defaultZoom);
-
-        map.resize(); // Ensure map resizes correctly
-    });
-
-    map.on('move', () => {
-        setLng(map.getCenter().lng.toFixed(4));
-        setLat(map.getCenter().lat.toFixed(4));
-        setZoom(map.getZoom().toFixed(2));
-    });
-
-    return map;
-};
-
-/**
- * Adds drawing controls to the map and sets up event listeners for drawing actions.
- * @param {mapboxgl.Map} map - The Mapbox GL map instance.
- * @param {Function} onFeatureSelect - Callback function to handle feature selection events.
- * @returns {MapboxDraw} The drawing control instance.
- */
-const addDrawControls = (map, onFeatureSelect) => {
     const draw = new MapboxDraw({
         displayControlsDefault: false,
         controls: {
@@ -64,49 +29,125 @@ const addDrawControls = (map, onFeatureSelect) => {
     });
     map.addControl(draw);
 
-    map.on('draw.create', (e) => {
-        const features = draw.getAll();
-        saveToLocalStorage('geojson', features);
-        onFeatureSelect(e);
+    map.on('load', () => {
+        setMapInitialized(true);
+        setLng(defaultCoordinates[0]);
+        setLat(defaultCoordinates[1]);
+        setZoom(defaultZoom);
+        map.resize();
+
+        const geojson = getFromLocalStorage('geojson');
+        if (geojson) {
+            map.addSource('geojson', {
+                type: 'geojson',
+                data: geojson
+            });
+            map.addLayer({
+                id: 'geojson-layer',
+                type: 'fill',
+                source: 'geojson',
+                paint: {
+                    "fill-color": "#888",
+                    "fill-opacity": 0.4
+                }
+            });
+            map.addLayer({
+                id: 'text-label',
+                type: 'symbol',
+                source: 'geojson',
+                layout: {
+                    'text-field': ['get', 'name'],
+                    'text-size': 14,
+                    'text-anchor': 'top'
+                }
+            })
+        }
+
+        map.on('click', 'geojson-layer', (e) => {
+            const res = map.queryRenderedFeatures(e.point, { layers: ['geojson-layer'] });
+            const res_id = res[0].properties.id
+            const geojson = getFromLocalStorage('geojson')
+            const selected = geojson.features.find(item => item.id === res_id)
+            console.log('selece',selected);
+            console.log('res_id',res_id);
+
+            draw.add(selected)
+            const name = res.map(property => property.properties?.name)
+            console.log('FFF', res.map(property => property.properties));
+            new mapboxgl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML(`<b>${name[0]}</b>`)
+                .addTo(map)
+        });
     });
 
-    map.on('draw.update', (e) => {
-        const features = draw.getAll();
-        saveToLocalStorage('geojson', features);
+    map.on('move', () => {
+        setLng(map.getCenter().lng.toFixed(4));
+        setLat(map.getCenter().lat.toFixed(4));
+        setZoom(map.getZoom().toFixed(2));
     });
 
-    map.on('draw.delete', (e) => {
-        const features = draw.getAll();
-        const remainingFeatures = features.features.filter(feature => feature.id !== e.features[0].id);
-        saveToLocalStorage('geojson', { features: remainingFeatures });
-    });
+    addDrawControls(map, draw, onFeatureSelect);
 
-    return draw;
+    return map;
+};
+const addDrawControls = (map, draw, onFeatureSelect) => {
+    const updateAndSaveFeatures = (e) => {
+        const eventType = e.type;
+        const drawnFeatures = draw.getAll().features;
+
+        // fetch local features
+        const existingFeatures = getFromLocalStorage('geojson')?.features || [];
+
+        let updatedFeatures;
+
+        if (eventType === 'draw.create') {
+            // add id into properties
+            const newFeatures = e.features.map((feature, index) => {
+                const id = feature.id || Date.now() + index;
+                return { ...feature, properties: { ...feature.properties, id } };
+            });
+            // combine all features
+            updatedFeatures = [...existingFeatures, ...newFeatures];
+        } else {
+            // make sure id is unique
+            const featuresMap = new Map(existingFeatures.map(feature => [feature.properties.id, feature]));
+
+            for (const feature of drawnFeatures) {
+                featuresMap.set(feature.properties.id, feature);
+            }
+
+            updatedFeatures = Array.from(featuresMap.values());
+        }
+
+        // save update features to local storage
+        saveToLocalStorage('geojson', { type: 'FeatureCollection', features: updatedFeatures });
+
+        // update map dateset
+        updateGeoJSONSource(map, { type: 'FeatureCollection', features: updatedFeatures });
+
+        // call on featureSelect
+        if (onFeatureSelect) {
+            onFeatureSelect({ type: eventType, features: e.features });
+        }
+    };
+
+    map.on('draw.create', updateAndSaveFeatures);
+    map.on('draw.update', updateAndSaveFeatures);
+    map.on('draw.delete', updateAndSaveFeatures);
 };
 
-/**
- * Loads the map into the specified container, optionally using geolocation for the initial center.
- * @param {HTMLElement} container - The container to load the map into.
- * @param {Function} setLng - Setter function for longitude state.
- * @param {Function} setLat - Setter function for latitude state.
- * @param {Function} setZoom - Setter function for zoom level state.
- * @param {Function} setMapInitialized - Setter function to indicate map initialization is complete.
- * @param {Function} onFeatureSelect - Callback function for handling feature selection events.
- */
+
 export const loadMap = (container, setLng, setLat, setZoom, setMapInitialized, onFeatureSelect) => {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(position => {
             const userLng = position.coords.longitude;
             const userLat = position.coords.latitude;
-            const map = initializeMap(container, setLng, setLat, setZoom, setMapInitialized);
-            map.setCenter([userLng, userLat]);
-            addDrawControls(map, onFeatureSelect);
+            initializeMap(container, setLng, setLat, setZoom, setMapInitialized, onFeatureSelect).setCenter([userLng, userLat]);
         }, () => {
-            const map = initializeMap(container, setLng, setLat, setZoom, setMapInitialized);
-            addDrawControls(map, onFeatureSelect);
+            initializeMap(container, setLng, setLat, setZoom, setMapInitialized, onFeatureSelect);
         });
     } else {
-        const map = initializeMap(container, setLng, setLat, setZoom, setMapInitialized);
-        addDrawControls(map, onFeatureSelect);
+        initializeMap(container, setLng, setLat, setZoom, setMapInitialized, onFeatureSelect);
     }
 };
