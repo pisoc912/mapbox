@@ -31,24 +31,24 @@ function MapBoxMap() {
         console.log('Event type:', e.type);
         console.log('Features:', e.features);
         if (e.type === 'draw.create') {
-            setFeatureData(e.features[0]);
+            setFeatureData(e.features[e.features.length - 1]);
             setIsModalOpen(true);
         }
     };
 
     const handleModalOk = (data) => {
         let updatedFeatures = getFromLocalStorage('geojson');
+        console.log('updatedFeatures',updatedFeatures);
+        console.log('featureData', featureData);
+        
         const featureIndex = updatedFeatures.features.findIndex(f => f.id === featureData.id);
+        console.log('Updated featureData', updatedFeatures.features[featureIndex]);
 
         if (featureIndex !== -1) {
             updatedFeatures.features[featureIndex].properties.name = data.name;
+            console.log(featureData);
             setFeatureData(updatedFeatures.features[featureIndex]);
             saveToLocalStorage('geojson', updatedFeatures);
-
-            // Update the map's data source to reflect the changes
-            if (mapInstance) {
-                updateGeoJSONSource(mapInstance, updatedFeatures);
-            }
         }
 
         setIsModalOpen(false);

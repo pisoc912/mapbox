@@ -6,9 +6,11 @@ export const getFromLocalStorage = (key) => {
     return JSON.parse(localStorage.getItem(key));
 };
 
+//Make sure updateGeoJSONSource is executed after the map style is loaded
 export const updateGeoJSONSource = (map, geojson) => {
     if (!map || !map.isStyleLoaded()) {
-        console.error('Map is not loaded yet');
+        console.warn('Map is not loaded yet, retrying...');
+        setTimeout(() => updateGeoJSONSource(map, geojson), 1000); // delay, retry
         return;
     }
 
