@@ -25,13 +25,22 @@ Follow these steps to set up the MapBoxMap component in your project:
     npm install @mui/material
    ```
 
-2. **Mapbox Access Token**:
+2. **Set up Mapbox Access Token**:
 
-   Obtain a Mapbox access token from [Mapbox](https://mapbox.com/) and configure it in your environment or directly within your application:
+   Create a `.env` file in the root of your project and add your Mapbox access token:
+
+   ```plaintext
+   REACT_APP_MAPBOX_ACCESS_TOKEN=Your_Mapbox_Access_Token_Here
+   ```
+
+   In your project, create a file `constants.js` to handle environment variables:
 
    ```javascript
-   mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
+   // constants.js
+   export const accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
    ```
+
+   Ensure you import and use `accessToken` in your Mapbox-related code to authenticate requests.
 
 3. **Import the Component**:
 
