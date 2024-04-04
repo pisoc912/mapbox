@@ -75,13 +75,13 @@ export const initializeMap = (container, setLng, setLat, setZoom, setMapInitiali
                 source: 'geojson-data',
                 layout: {
                     'text-field': ['get', 'name'],
-                    'text-size': 18, 
+                    'text-size': 15, 
                     'text-anchor': 'top',
                     'text-justify': 'center' 
                 },
                 paint: {
                     'text-color': '#ffffff',
-                    'text-halo-color': '#000000',
+                    'text-halo-color': '#8144ad',
                     'text-halo-width': 1.5, 
                     'text-halo-blur': 1 
                 }
