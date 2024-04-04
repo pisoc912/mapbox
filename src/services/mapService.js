@@ -63,8 +63,9 @@ export const initializeMap = (container, setLng, setLat, setZoom, setMapInitiali
                 type: 'fill',
                 source: 'geojson-data',
                 paint: {
-                    "fill-color": "#6a0dad",  
-                    "fill-opacity": 0.5,     
+                    "fill-color": "#b48dd0", 
+                    "fill-opacity": 0.5,
+                    "fill-outline-color": "#ffffff"
                 }
             });
 
@@ -74,11 +75,20 @@ export const initializeMap = (container, setLng, setLat, setZoom, setMapInitiali
                 source: 'geojson-data',
                 layout: {
                     'text-field': ['get', 'name'],
-                    'text-size': 14,
-                    'text-anchor': 'top'
+                    'text-size': 18, 
+                    'text-anchor': 'top',
+                    'text-justify': 'center' 
+                },
+                paint: {
+                    'text-color': '#ffffff',
+                    'text-halo-color': '#000000',
+                    'text-halo-width': 1.5, 
+                    'text-halo-blur': 1 
                 }
-            })
+            });
         }
+
+
         updateGeoJSONSource(map, geojson);
         map.on('click', 'geojson-layer', (e) => {
             try {
