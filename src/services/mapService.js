@@ -51,7 +51,7 @@ export const initializeMap = (container, setLng, setLat, setZoom, setMapInitiali
         setZoom(defaultZoom);
         map.resize();
 
-        const geojson = getFromLocalStorage('geojson');
+        const geojson = getFromLocalStorage('geojson') || { type: 'FeatureCollection', features: [] };
         console.log("geojson", geojson);
         if (geojson) {
             map.addSource('geojson-data', {
@@ -145,44 +145,53 @@ export const initializeMap = (container, setLng, setLat, setZoom, setMapInitiali
 const addDrawControls = (map, draw, onFeatureSelect) => {
     function handleCreateFeature(map, draw, onFeatureSelect) {
         console.log('Create event');
-        const newFeature = draw.getAll().features.pop(); // Get the latest drawn features
+        const newFeature = draw.getAll().features.pop(); // get new feature
 
         const storedGeoJson = getFromLocalStorage('geojson') || { type: 'FeatureCollection', features: [] };
-        storedGeoJson.features.push(newFeature); // Add new features to feature set
+        storedGeoJson.features.push(newFeature); // add new feature
 
-        if (map.getSource('geojson-data')) {
-            map.getSource('geojson-data').setData(storedGeoJson); //Update map data source
+        // 检查地图数据源是否存在并且类型正确
+        const geojsonSource = map.getSource('geojson-data');
+        console.log(geojsonSource);
+        if (geojsonSource && geojsonSource.setData) {
+            geojsonSource.setData(storedGeoJson); // Update date source
+        } else {
+            console.error('Failed to update map data source.');
         }
 
         onFeatureSelect({ type: 'draw.create', features: newFeature });
     }
 
-    function handleUpdateFeature(map, draw, onFeatureSelect) {
+    function handleUpdateFeature(map, e) {
         console.log('Update event');
         const eventType = 'draw.update';
-        const drawnFeatures = draw.getAll().features;
+        const updatedFeature = e.features[0]; // Get the updated feature
 
-        const existingFeatures = getFromLocalStorage('geojson')?.features || [];
+        const storedGeoJson = getFromLocalStorage('geojson') || { type: 'FeatureCollection', features: [] };
 
-        // make sure id is unique
-        const featuresMap = new Map(existingFeatures.map(feature => [feature.properties.id, feature]));
-
-        for (const feature of drawnFeatures) {
-            featuresMap.set(feature.properties.id, feature);
+        // Find and update the feature in local storage based on its ID
+        const storedFeatureIndex = storedGeoJson.features.findIndex(f => f.properties.id === updatedFeature.properties.id);
+        if (storedFeatureIndex !== -1) {
+            storedGeoJson.features[storedFeatureIndex] = updatedFeature;
+        } else {
+            console.error(`Feature with ID ${updatedFeature.properties.id} not found in local storage.`);
         }
 
-        const updatedFeatures = Array.from(featuresMap.values());
+        saveToLocalStorage('geojson', storedGeoJson); // Save the updated GeoJSON to local storage
 
-        // save update features to local storage
-        saveToLocalStorage('geojson', { type: 'FeatureCollection', features: updatedFeatures });
-
-        // update map dataset
-        updateGeoJSONSource(map, { type: 'FeatureCollection', features: updatedFeatures });
+        // Check if the map data source exists and has the correct type
+        const geojsonSource = map.getSource('geojson-data');
+        if (geojsonSource && geojsonSource.setData) {
+            geojsonSource.setData(storedGeoJson); // Update the map data source
+        } else {
+            console.error('Failed to update map data source.');
+        }
 
         if (onFeatureSelect) {
-            onFeatureSelect({ type: eventType, features: updatedFeatures })
+            onFeatureSelect({ type: eventType, features: [updatedFeature] });
         }
     }
+
 
     function handleDeleteFeature(map, featureId) {
         try {
@@ -222,7 +231,7 @@ const addDrawControls = (map, draw, onFeatureSelect) => {
 
     // Listen for editing events
     map.on('draw.update', function (e) {
-        handleUpdateFeature(map, draw, onFeatureSelect);
+        handleUpdateFeature(map, e);
     });
 
     // Listen for delete events

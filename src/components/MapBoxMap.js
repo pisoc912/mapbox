@@ -77,7 +77,7 @@ function MapBoxMap() {
             }
 
             // Save updated GeoJSON to localStorage
-            const updatedGeoJson = {...storedGeoJson, features:featuresArray}
+            const updatedGeoJson = {...storedGeoJson,type: 'FeatureCollection', features: featuresArray };
             saveToLocalStorage('geojson', updatedGeoJson);
 
             console.log('Saving to localStorage:', updatedGeoJson);
