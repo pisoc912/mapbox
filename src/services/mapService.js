@@ -85,7 +85,6 @@ export const initializeMap = (container, setLng, setLat, setZoom, setMapInitiali
                 const res = map.queryRenderedFeatures(e.point, { layers: ['geojson-layer'] });
                 if (res.length > 0) {
                     const res_id = res[0].properties.id;
-                    console.log("res_id",res_id);
                     const geojson = getFromLocalStorage('geojson');
                     if (geojson && Array.isArray(geojson.features)) {
                         const selected = geojson.features.find(item => item.id === res_id);
@@ -111,12 +110,10 @@ export const initializeMap = (container, setLng, setLat, setZoom, setMapInitiali
                 console.error('Error handling click event on geojson-layer:', error);
             }
         });
-        
+
         map.on('click', 'text-label', (e) => {
-            console.log(e.features);
             const eventType = 'draw.changeName'
             const featureId = e.features[0].properties.id
-            console.log(eventType, featureId);
             onFeatureSelect({ type: eventType, id: featureId })
         });
     });

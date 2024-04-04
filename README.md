@@ -1,70 +1,79 @@
-# Getting Started with Create React App
+# MapBoxMap Component
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Overview
 
-## Available Scripts
+MapBoxMap is a React component designed to integrate a Mapbox GL JS map into your React application. It enables interactive mapping functionalities, including displaying and editing geographic data directly within the map interface.
 
-In the project directory, you can run:
+## Features
 
-### `npm start`
+- Map initialization with Mapbox GL JS
+- GeoJSON data management
+- Interactive drawing and editing of map features
+- Popup dialog for feature property editing
+- Local storage for data persistence
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Installation
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Follow these steps to set up the MapBoxMap component in your project:
 
-### `npm test`
+1. **Install dependencies**:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+   Execute the following command to install the required dependencies:
 
-### `npm run build`
+   ```bash
+    npm install mapbox-gl @mapbox/mapbox-gl-draw
+    npm install @mui/material
+   ```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+2. **Mapbox Access Token**:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+   Obtain a Mapbox access token from [Mapbox](https://mapbox.com/) and configure it in your environment or directly within your application:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+   ```javascript
+   mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
+   ```
 
-### `npm run eject`
+3. **Import the Component**:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+   Import `MapBoxMap` into your React application where it is needed:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+   ```javascript
+   import MapBoxMap from './MapBoxMap'; // Adjust the path as necessary
+   ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Running Your Application
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+To run your React application, execute the following command:
 
-## Learn More
+```bash
+npm start
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+This command starts the development server and opens the application in your default web browser.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Component Details
 
-### Code Splitting
+### `MapBoxMap`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+- Renders the map and manages state and user interactions.
+- Facilitates feature creation, selection, and name editing via `PopupDialog`.
 
-### Analyzing the Bundle Size
+#### Features
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+- Interactive map with capabilities to zoom and pan.
+- Create and edit features using `PopupDialog`.
+- Store and retrieve map features using local storage.
 
-### Making a Progressive Web App
+### `PopupDialog`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+- Modal dialog for entering or editing map feature names.
+- Triggered when a feature is either created or selected for editing.
 
-### Advanced Configuration
+## Services and Utilities
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+- **Map Service (`mapService.js`)**: Initializes and configures the map.
+- **Storage Service (`storageService.js`)**: Manages saving and retrieving of data from local storage.
 
-### Deployment
+## Integration
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Integrate `MapBoxMap` in your React application where a map display is required. It is self-contained, managing its state and lifecycle, hence requiring minimal setup.
