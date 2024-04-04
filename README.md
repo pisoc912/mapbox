@@ -1,5 +1,9 @@
 # MapBoxMap Component
 
+
+https://github.com/pisoc912/perimeter/assets/123050861/0580b97c-88a5-4667-8640-28de6ab5f100
+
+
 ## Overview
 
 MapBoxMap is a React component designed to integrate a Mapbox GL JS map into your React application. It enables interactive mapping functionalities, including displaying and editing geographic data directly within the map interface.
