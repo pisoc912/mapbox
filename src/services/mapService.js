@@ -54,14 +54,14 @@ export const initializeMap = (container, setLng, setLat, setZoom, setMapInitiali
         const geojson = getFromLocalStorage('geojson');
         console.log("geojson", geojson);
         if (geojson) {
-            map.addSource('geojson', {
+            map.addSource('geojson-data', {
                 type: 'geojson',
                 data: geojson
             });
             map.addLayer({
                 id: 'geojson-layer',
                 type: 'fill',
-                source: 'geojson',
+                source: 'geojson-data',
                 paint: {
                     "fill-color": "#6a0dad",  
                     "fill-opacity": 0.5,     
@@ -71,7 +71,7 @@ export const initializeMap = (container, setLng, setLat, setZoom, setMapInitiali
             map.addLayer({
                 id: 'text-label',
                 type: 'symbol',
-                source: 'geojson',
+                source: 'geojson-data',
                 layout: {
                     'text-field': ['get', 'name'],
                     'text-size': 14,
@@ -145,17 +145,18 @@ export const initializeMap = (container, setLng, setLat, setZoom, setMapInitiali
 const addDrawControls = (map, draw, onFeatureSelect) => {
     function handleCreateFeature(map, draw, onFeatureSelect) {
         console.log('Create event');
-        const eventType = 'draw.create';
-        const drawnFeatures = draw.getAll().features;
+        const newFeature = draw.getAll().features.pop(); // Get the latest drawn features
 
-  
-        if (drawnFeatures.length > 0) {
-            const newFeature = drawnFeatures[drawnFeatures.length - 1];
-            updateGeoJSONSource(map, { type: 'FeatureCollection', features: newFeature });
+        const storedGeoJson = getFromLocalStorage('geojson') || { type: 'FeatureCollection', features: [] };
+        storedGeoJson.features.push(newFeature); // Add new features to feature set
 
-            onFeatureSelect({ type: eventType, features: newFeature })
+        if (map.getSource('geojson-data')) {
+            map.getSource('geojson-data').setData(storedGeoJson); //Update map data source
         }
+
+        onFeatureSelect({ type: 'draw.create', features: newFeature });
     }
+
     function handleUpdateFeature(map, draw, onFeatureSelect) {
         console.log('Update event');
         const eventType = 'draw.update';

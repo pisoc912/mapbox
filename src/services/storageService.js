@@ -14,7 +14,7 @@ export const updateGeoJSONSource = (map, geojson) => {
         return;
     }
 
-    const source = map.getSource('geojson');
+    const source = map.getSource('geojson-data');
     if (source) {
         source.setData(geojson);
     } else {
