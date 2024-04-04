@@ -23,7 +23,7 @@ const defaultZoom = 9;
  * @param {Function} setMapInitialized - Function to update the map's initialization status.
  * @param {Function} onFeatureSelect - Callback function triggered when a feature is selected on the map.
  */
-const initializeMap = (container, setLng, setLat, setZoom, setMapInitialized, onFeatureSelect) => {
+export const initializeMap = (container, setLng, setLat, setZoom, setMapInitialized, onFeatureSelect) => {
     mapboxgl.accessToken = accessToken;
 
     const map = new mapboxgl.Map({
@@ -52,6 +52,7 @@ const initializeMap = (container, setLng, setLat, setZoom, setMapInitialized, on
         map.resize();
 
         const geojson = getFromLocalStorage('geojson');
+        console.log("geojson", geojson);
         if (geojson) {
             map.addSource('geojson', {
                 type: 'geojson',
@@ -78,22 +79,45 @@ const initializeMap = (container, setLng, setLat, setZoom, setMapInitialized, on
                 }
             })
         }
-
+        updateGeoJSONSource(map, geojson);
         map.on('click', 'geojson-layer', (e) => {
-            const res = map.queryRenderedFeatures(e.point, { layers: ['geojson-layer'] });
-            const res_id = res[0].properties.id
-            const geojson = getFromLocalStorage('geojson')
-            const selected = geojson.features.find(item => item.id === res_id)
-            console.log('selece',selected);
-            console.log('res_id',res_id);
+            try {
+                const res = map.queryRenderedFeatures(e.point, { layers: ['geojson-layer'] });
+                if (res.length > 0) {
+                    const res_id = res[0].properties.id;
+                    console.log("res_id",res_id);
+                    const geojson = getFromLocalStorage('geojson');
+                    if (geojson && Array.isArray(geojson.features)) {
+                        const selected = geojson.features.find(item => item.id === res_id);
 
-            draw.add(selected)
-            const name = res.map(property => property.properties?.name)
-            console.log('FFF', res.map(property => property.properties));
-            new mapboxgl.Popup()
-                .setLngLat(e.lngLat)
-                .setHTML(`<b>${name[0]}</b>`)
-                .addTo(map)
+                        if (selected) {
+                            draw.add(selected);
+                            const name = selected.properties.name;
+                            console.log('Selected feature', selected);
+                            new mapboxgl.Popup()
+                                .setLngLat(e.lngLat)
+                                .setHTML(`<b>${name}</b>`)
+                                .addTo(map);
+                        } else {
+                            console.error('Selected feature not found in local storage');
+                        }
+                    } else {
+                        console.error('Invalid GeoJSON data in local storage');
+                    }
+                } else {
+                    console.error('No features found at the clicked location');
+                }
+            } catch (error) {
+                console.error('Error handling click event on geojson-layer:', error);
+            }
+        });
+        
+        map.on('click', 'text-label', (e) => {
+            console.log(e.features);
+            const eventType = 'draw.changeName'
+            const featureId = e.features[0].properties.id
+            console.log(eventType, featureId);
+            onFeatureSelect({ type: eventType, id: featureId })
         });
     });
 
@@ -127,27 +151,14 @@ const addDrawControls = (map, draw, onFeatureSelect) => {
         const eventType = 'draw.create';
         const drawnFeatures = draw.getAll().features;
 
-        const existingFeatures = getFromLocalStorage('geojson')?.features || [];
+  
+        if (drawnFeatures.length > 0) {
+            const newFeature = drawnFeatures[drawnFeatures.length - 1];
+            updateGeoJSONSource(map, { type: 'FeatureCollection', features: newFeature });
 
-        const newFeatures = drawnFeatures.map((feature, index) => {
-            const id = feature.id || Date.now() + index;
-            console.log("id",id);
-            return { ...feature, properties: { ...feature.properties, id } };
-        });
-
-        const updatedFeatures = [...existingFeatures, ...newFeatures];
-        console.log('updatedFeatures', updatedFeatures);
-        // save update features to local storage
-        saveToLocalStorage('geojson', { type: 'FeatureCollection', features: updatedFeatures });
-
-        // update map dataset
-        updateGeoJSONSource(map, { type: 'FeatureCollection', features: updatedFeatures });
-
-        if (onFeatureSelect) {
-            onFeatureSelect({ type: eventType, features: updatedFeatures })
+            onFeatureSelect({ type: eventType, features: newFeature })
         }
     }
-
     function handleUpdateFeature(map, draw, onFeatureSelect) {
         console.log('Update event');
         const eventType = 'draw.update';
@@ -177,25 +188,34 @@ const addDrawControls = (map, draw, onFeatureSelect) => {
 
     function handleDeleteFeature(map, featureId) {
         try {
-            // Fetch GEOJSON Data from localStorage
+            // Fetch GeoJSON data from localStorage
             const storedData = localStorage.getItem('geojson');
             const geojson = storedData ? JSON.parse(storedData) : { type: "FeatureCollection", features: [] };
 
-            // Filter 
-            const updatedFeatures = geojson.features.filter(feature => feature.id !== featureId);
+            // Filter out the feature with the given featureId
+            const updatedFeatures = geojson.features.filter(feature => {
+                // Assuming the feature id is directly on the feature, not in properties
+                return feature.id !== featureId;
+            });
 
-            // Update localStorage
+            // Check if the filtering actually removed any feature
+            if (geojson.features.length === updatedFeatures.length) {
+                console.warn(`Feature with id ${featureId} not found.`);
+                return;
+            }
+
+            // Update localStorage with the new set of features
             const updatedGeoJSON = { type: "FeatureCollection", features: updatedFeatures };
             localStorage.setItem('geojson', JSON.stringify(updatedGeoJSON));
 
-            // Update Map GEO dataset
-            updateGeoJSONSource(map, { type: 'FeatureCollection', features: updatedFeatures });
+            // Update map GeoJSON dataset
+            updateGeoJSONSource(map, updatedGeoJSON);
 
         } catch (error) {
             console.error('Error deleting feature:', error);
-            // TODO: Handle the exception appropriately
         }
     }
+
     
     // Add a listener for creating layers
     map.on('draw.create', function (e) {
@@ -210,7 +230,9 @@ const addDrawControls = (map, draw, onFeatureSelect) => {
     // Listen for delete events
     map.on('draw.delete', function (e) {
         const featureId = e.features[0].id;
-        handleDeleteFeature(map, draw, featureId);
+        console.log('featureId', featureId);
+        console.log(e.features);
+        handleDeleteFeature(map, featureId);
     });
 };
 
